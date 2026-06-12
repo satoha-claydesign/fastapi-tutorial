@@ -18,3 +18,15 @@ FastAPIの基礎を順番に学ぶ練習プロジェクト。
 - `str | None` はPython 3.10以上の書き方。3.9では `Optional[str]` を使う
 - 型ヒントを書くだけで自動バリデーションが動く
 - `--reload` でコード変更時にサーバーが自動再起動する
+- [x] POSTリクエスト・Pydanticモデル  ← 次回ここから
+
+## 今日の進捗（2026-06-12）
+- [x] POSTリクエスト・Pydanticモデル
+- [x] 入力・出力モデルを分ける（ItemCreate / ItemResponse）
+- [x] response_model でレスポンスを制御
+- [x] HTTPException でエラーハンドリング
+- [x] 依存性注入（Depends）の基本
+
+## 次回から
+- [ ] 依存性注入の応用（認証への活用）
+- [ ] データベース連携
