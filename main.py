@@ -1,9 +1,60 @@
-from fastapi import FastAPI
 from typing import Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
+from sqlmodel import Field, Session, SQLModel, create_engine, select
+
 
 app = FastAPI()
+
+# ベースモデル（共通フィールド）
+class HeroBase(SQLModel):
+    name: str
+    age: Optional[int] = None
+
+# DBテーブル（idを持つ）
+class Hero(HeroBase, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+# 入力用（idなし）
+class HeroCreate(HeroBase):
+    pass
+
+# SQLiteのDB作成（ファイルとして保存される）
+engine = create_engine("sqlite:///database.db")
+
+# アプリ起動時にテーブルを作成
+SQLModel.metadata.create_all(engine)
+
+# DB接続を返す依存関数
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+# ヒーローを作成
+# エンドポイントを修正
+@app.post("/heroes/", response_model=Hero)
+def create_hero(hero: HeroCreate, session: Session = Depends(get_session)):
+    db_hero = Hero.model_validate(hero)
+    session.add(db_hero)
+    session.commit()
+    session.refresh(db_hero)
+    return db_hero
+
+# ヒーロー一覧を取得
+@app.get("/heroes/", response_model=list[Hero])
+def read_heroes(session: Session = Depends(get_session)):
+    heroes = session.exec(select(Hero)).all()
+    return heroes
+
+
+def verify_token(x_token: str = Header()):
+    if x_token != "secret-token":
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return x_token
+
+@app.get("/protected/")
+def protected_route(token: str = Depends(verify_token)):
+    return {"message": "認証成功！", "token": token}
 
 def common_parameters(skip: int = 0, limit: int = 10):
     return {"skip": skip, "limit": limit}

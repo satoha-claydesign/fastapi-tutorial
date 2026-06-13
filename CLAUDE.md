@@ -30,3 +30,14 @@ FastAPIの基礎を順番に学ぶ練習プロジェクト。
 ## 次回から
 - [ ] 依存性注入の応用（認証への活用）
 - [ ] データベース連携
+
+## 今日の進捗（2026-06-13）
+- [x] 依存性注入の応用（Headerを使ったトークン認証）
+- [x] SQLModelでDB連携（SQLite）
+- [x] DBへの保存・取得（POST / GET）
+- [x] 入力・DBモデルの分離（HeroBase / HeroCreate / Hero）
+
+## 次回から
+- [ ] 更新（PUT/PATCH）・削除（DELETE）エンドポイント
+- [ ] バリデーションの詳細（Field, validator）
+- [ ] 環境変数・設定管理
