@@ -1,15 +1,31 @@
 from typing import Optional
 from pydantic import BaseModel
+from pydantic import field_validator
 from fastapi import FastAPI, HTTPException, Depends, Header
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+from pydantic_settings import BaseSettings
 
+
+class Settings(BaseSettings):
+    app_name: str = "Default App"
+    database_url: str = "sqlite:///database.db"
+    secret_key: str = "default-secret"
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings()
 
 app = FastAPI()
 
+@app.get("/settings/")
+def read_settings():
+    return {"app_name": settings.app_name}
+
 # ベースモデル（共通フィールド）
 class HeroBase(SQLModel):
-    name: str
-    age: Optional[int] = None
+    name: str = Field(min_length=1, max_length=50)
+    age: Optional[int] = Field(default=None, ge=0, le=150)
 
 # DBテーブル（idを持つ）
 class Hero(HeroBase, table=True):
@@ -20,7 +36,7 @@ class HeroCreate(HeroBase):
     pass
 
 # SQLiteのDB作成（ファイルとして保存される）
-engine = create_engine("sqlite:///database.db")
+engine = create_engine(settings.database_url)
 
 # アプリ起動時にテーブルを作成
 SQLModel.metadata.create_all(engine)
@@ -46,6 +62,26 @@ def read_heroes(session: Session = Depends(get_session)):
     heroes = session.exec(select(Hero)).all()
     return heroes
 
+@app.patch("/heroes/{hero_id}", response_model=Hero)
+def update_hero(hero_id: int, hero: HeroCreate, session: Session = Depends(get_session)):
+    db_hero = session.get(Hero, hero_id)
+    if not db_hero:
+        raise HTTPException(status_code=404, detail="Hero not found")
+    hero_data = hero.model_dump(exclude_unset=True)
+    db_hero.sqlmodel_update(hero_data)
+    session.add(db_hero)
+    session.commit()
+    session.refresh(db_hero)
+    return db_hero
+
+@app.delete("/heroes/{hero_id}")
+def delete_hero(hero_id: int, session: Session = Depends(get_session)):
+    db_hero = session.get(Hero, hero_id)
+    if not db_hero:
+        raise HTTPException(status_code=404, detail="Hero not found")
+    session.delete(db_hero)
+    session.commit()
+    return {"message": "削除しました"}
 
 def verify_token(x_token: str = Header()):
     if x_token != "secret-token":

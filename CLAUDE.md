@@ -36,6 +36,9 @@ FastAPIの基礎を順番に学ぶ練習プロジェクト。
 - [x] SQLModelでDB連携（SQLite）
 - [x] DBへの保存・取得（POST / GET）
 - [x] 入力・DBモデルの分離（HeroBase / HeroCreate / Hero）
+- [x] 更新（PUT/PATCH）・削除（DELETE）エンドポイント
+- [x] バリデーションの詳細（Field, validator）
+- [x] 環境変数・設定管理
 
 ## 次回から
 - [ ] 更新（PUT/PATCH）・削除（DELETE）エンドポイント
