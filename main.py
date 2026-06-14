@@ -9,6 +9,8 @@ from sqlmodel import Field, Session, SQLModel, create_engine, select
 from pydantic_settings import BaseSettings
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from routers import heroes, auth
+from models import Hero, HeroBase, HeroCreate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +34,9 @@ settings = Settings()
 
 app = FastAPI(lifespan=lifespan)
 
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(heroes.router, prefix="/heroes", tags=["heroes"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  # フロントのURL
@@ -52,18 +57,6 @@ async def add_process_time_header(request: Request, call_next):
 def read_settings():
     return {"app_name": settings.app_name}
 
-# ベースモデル（共通フィールド）
-class HeroBase(SQLModel):
-    name: str = Field(min_length=1, max_length=50)
-    age: Optional[int] = Field(default=None, ge=0, le=150)
-
-# DBテーブル（idを持つ）
-class Hero(HeroBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-# 入力用（idなし）
-class HeroCreate(HeroBase):
-    pass
 
 # SQLiteのDB作成（ファイルとして保存される）
 engine = create_engine(settings.database_url)
@@ -73,34 +66,6 @@ engine = create_engine(settings.database_url)
 def get_session():
     with Session(engine) as session:
         yield session
-
-# ヒーローを作成
-# エンドポイントを修正
-@app.post("/heroes/", response_model=Hero)
-def create_hero(hero: HeroCreate, session: Session = Depends(get_session)):
-    db_hero = Hero.model_validate(hero)
-    session.add(db_hero)
-    session.commit()
-    session.refresh(db_hero)
-    return db_hero
-
-# ヒーロー一覧を取得
-@app.get("/heroes/", response_model=list[Hero])
-def read_heroes(session: Session = Depends(get_session)):
-    heroes = session.exec(select(Hero)).all()
-    return heroes
-
-@app.patch("/heroes/{hero_id}", response_model=Hero)
-def update_hero(hero_id: int, hero: HeroCreate, session: Session = Depends(get_session)):
-    db_hero = session.get(Hero, hero_id)
-    if not db_hero:
-        raise HTTPException(status_code=404, detail="Hero not found")
-    hero_data = hero.model_dump(exclude_unset=True)
-    db_hero.sqlmodel_update(hero_data)
-    session.add(db_hero)
-    session.commit()
-    session.refresh(db_hero)
-    return db_hero
 
 def verify_token(x_token: str = Header()):
     if x_token != "secret-token":
@@ -163,12 +128,3 @@ async def app_exception_handler(request: Request, exc: AppException):
         content={"detail": exc.message},
     )
 
-# DELETE エンドポイントを書き換え
-@app.delete("/heroes/{hero_id}")
-def delete_hero(hero_id: int, session: Session = Depends(get_session)):
-    db_hero = session.get(Hero, hero_id)
-    if not db_hero:
-        raise NotFoundError("ヒーローが見つかりません")
-    session.delete(db_hero)
-    session.commit()
-    return {"message": "削除しました"}
