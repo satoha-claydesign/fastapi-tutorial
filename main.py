@@ -9,7 +9,7 @@ from sqlmodel import Field, Session, SQLModel, create_engine, select
 from pydantic_settings import BaseSettings
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from routers import heroes, auth
+from routers import heroes, auth, books
 from models import Hero, HeroBase, HeroCreate
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(heroes.router, prefix="/heroes", tags=["heroes"])
+app.include_router(books.router, prefix="/books", tags=["books"])
 
 app.add_middleware(
     CORSMiddleware,
